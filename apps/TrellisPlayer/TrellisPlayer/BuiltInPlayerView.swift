@@ -1,10 +1,10 @@
 import AVKit
 import SwiftUI
 
-/// Lecteur AVPlayer plein écran, avec les cookies de la session Trellis.
+/// Lecteur AVPlayer plein écran. Contrairement à Infuse, il peut envoyer les
+/// en-têtes HTTP (Referer, User-Agent…) exigés par certains flux.
 struct BuiltInPlayerView: View {
-    let video: DetectedVideo
-    let cookies: [HTTPCookie]
+    let stream: PlayableStream
 
     @Environment(\.dismiss) private var dismiss
     @State private var player: AVPlayer?
@@ -28,7 +28,11 @@ struct BuiltInPlayerView: View {
             .accessibilityLabel("Fermer")
         }
         .onAppear {
-            let asset = AVURLAsset(url: video.url, options: [AVURLAssetHTTPCookiesKey: cookies])
+            var options: [String: Any] = [:]
+            if !stream.headers.isEmpty {
+                options["AVURLAssetHTTPHeaderFieldsKey"] = stream.headers
+            }
+            let asset = AVURLAsset(url: stream.url, options: options)
             let player = AVPlayer(playerItem: AVPlayerItem(asset: asset))
             self.player = player
             player.play()

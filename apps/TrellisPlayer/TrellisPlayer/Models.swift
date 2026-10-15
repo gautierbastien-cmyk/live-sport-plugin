@@ -4,24 +4,11 @@ enum AppDefaults {
     static let serverURL = "https://bastien-trellis.duckdns.org"
 }
 
-/// Vidéo repérée dans la page Trellis.
-struct DetectedVideo: Identifiable, Hashable {
-    let id = UUID()
-    let url: URL
-    let pageTitle: String?
-
-    var displayName: String {
-        if let pageTitle, !pageTitle.isEmpty { return pageTitle }
-        return url.lastPathComponent.isEmpty ? url.absoluteString : url.lastPathComponent
-    }
-}
-
-/// Lecteur utilisé quand une vidéo démarre dans la page.
+/// Lecteur utilisé quand on choisit un flux.
 enum PlayerChoice: String, CaseIterable, Identifiable {
     case ask
     case infuse
     case builtIn
-    case web
 
     var id: String { rawValue }
 
@@ -30,7 +17,6 @@ enum PlayerChoice: String, CaseIterable, Identifiable {
         case .ask: return "Toujours demander"
         case .infuse: return "Infuse"
         case .builtIn: return "Lecteur intégré"
-        case .web: return "Lecteur de la page"
         }
     }
 }
