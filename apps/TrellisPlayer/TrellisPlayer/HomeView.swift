@@ -103,20 +103,21 @@ struct TileCard: View {
     }
 }
 
-/// Contenu d'une tuile : toutes ses collections réunies dans une grille.
+/// Contenu d'une tuile : ses collections Treillis et ses listes Trakt réunies.
 struct TileView: View {
     let tile: Tile
 
     @EnvironmentObject private var session: Session
     @State private var items: [BaseItem] = []
+    @State private var traktItems: [ExternalItem] = []
     @State private var loading = true
-    @State private var error: String?
+    @State private var errors: [String] = []
 
     var body: some View {
         ScrollView {
             if loading {
                 ProgressView().padding(.top, 60)
-            } else if items.isEmpty {
+            } else if items.isEmpty && traktItems.isEmpty {
                 ContentUnavailableView {
                     Label("Rien à afficher", systemImage: "square.stack")
                 } description: {
@@ -124,7 +125,11 @@ struct TileView: View {
                 }
                 .padding(.top, 40)
             } else {
-                ItemGrid(items: items).padding(.vertical)
+                VStack(alignment: .leading, spacing: 16) {
+                    if !items.isEmpty { ItemGrid(items: items) }
+                    if !traktItems.isEmpty { ExternalGrid(items: traktItems) }
+                }
+                .padding(.vertical)
             }
         }
         .navigationTitle(tile.title)
@@ -134,8 +139,8 @@ struct TileView: View {
     }
 
     private var emptyMessage: String {
-        if let error { return error }
-        if tile.collectionIds.isEmpty, let kind = tile.externalSources.first {
+        if let error = errors.first { return error }
+        if tile.collectionIds.isEmpty, tile.traktSources.isEmpty, let kind = tile.externalSources.first {
             return "Cette tuile utilise une liste \(kind), qui n'est pas encore prise en charge par l'app."
         }
         return "Cette collection est vide pour le moment."
@@ -144,8 +149,11 @@ struct TileView: View {
     private func load() async {
         let client = session.client
         let ids = tile.collectionIds
-        var results: [Int: [BaseItem]] = [:]
-        var lastError: Error?
+        let trakt = tile.traktSources
+        var serverResults: [Int: [BaseItem]] = [:]
+        var traktResults: [Int: [ExternalItem]] = [:]
+        var failures: [String] = []
+
         await withTaskGroup(of: (Int, Result<[BaseItem], Error>).self) { group in
             for (index, id) in ids.enumerated() {
                 group.addTask {
@@ -155,14 +163,41 @@ struct TileView: View {
             }
             for await (index, result) in group {
                 switch result {
-                case .success(let list): results[index] = list
-                case .failure(let failure): lastError = failure
+                case .success(let list): serverResults[index] = list
+                case .failure(let error): failures.append(error.localizedDescription)
                 }
             }
         }
+
+        await withTaskGroup(of: (Int, Result<[ExternalItem], Error>).self) { group in
+            for (index, source) in trakt.enumerated() {
+                group.addTask {
+                    do {
+                        switch source {
+                        case .traktList(let username, let listId):
+                            return (index, .success(try await TraktClient.listItems(username: username, listId: listId)))
+                        case .traktBuiltIn(let kind):
+                            return (index, .success(try await TraktClient.watchlist(kind)))
+                        default:
+                            return (index, .success([]))
+                        }
+                    } catch {
+                        return (index, .failure(error))
+                    }
+                }
+            }
+            for await (index, result) in group {
+                switch result {
+                case .success(let list): traktResults[index] = list
+                case .failure(let error): failures.append(error.localizedDescription)
+                }
+            }
+        }
+
         var seen = Set<String>()
-        items = ids.indices.flatMap { results[$0] ?? [] }.filter { seen.insert($0.id).inserted }
-        error = items.isEmpty ? lastError?.localizedDescription : nil
+        items = ids.indices.flatMap { serverResults[$0] ?? [] }.filter { seen.insert($0.id).inserted }
+        traktItems = trakt.indices.flatMap { traktResults[$0] ?? [] }.filter { seen.insert($0.id).inserted }
+        errors = failures
         loading = false
     }
 }

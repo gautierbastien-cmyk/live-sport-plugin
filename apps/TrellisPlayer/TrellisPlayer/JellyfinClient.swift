@@ -41,6 +41,7 @@ struct JellyfinClient {
     }()
 
     private static let itemFields = "Overview,Genres,PrimaryImageAspectRatio,ProductionYear,OfficialRating,CommunityRating,RunTimeTicks"
+    private static let detailFields = itemFields + ",People,Studios,Taglines,ProviderIds,PremiereDate"
 
     // MARK: - Authentification
 
@@ -83,6 +84,31 @@ struct JellyfinClient {
         ])
     }
 
+    /// Retrouve sur Treillis un film ou une série venant de Trakt : d'abord par
+    /// identifiant IMDb/TMDB, sinon par titre et année.
+    func findMatch(for external: ExternalItem) async throws -> BaseItem? {
+        let results = try await userItems(query: [
+            "SearchTerm": external.title,
+            "IncludeItemTypes": external.kind == .movie ? "Movie" : "Series",
+            "Recursive": "true",
+            "Limit": "20",
+            "Fields": Self.itemFields + ",ProviderIds",
+        ])
+        let ids = external.media.ids
+        if let imdb = ids.imdb, let match = results.first(where: { $0.providerId("Imdb") == imdb }) {
+            return match
+        }
+        if let tmdb = ids.tmdb, let match = results.first(where: { $0.providerId("Tmdb") == String(tmdb) }) {
+            return match
+        }
+        let sameTitle = results.filter { ($0.name ?? "").localizedCaseInsensitiveCompare(external.title) == .orderedSame }
+        if let year = external.media.year,
+           let match = sameTitle.first(where: { $0.productionYear.map { abs($0 - year) <= 1 } ?? false }) {
+            return match
+        }
+        return sameTitle.first ?? (results.count == 1 ? results.first : nil)
+    }
+
     /// « Reprendre la lecture ».
     func resumeItems() async throws -> [BaseItem] {
         guard let userId else { return [] }
@@ -98,10 +124,10 @@ struct JellyfinClient {
     func item(id: String) async throws -> BaseItem {
         guard let userId else { throw JellyfinError.http(401) }
         do {
-            let data = try await send("Items/\(id)", query: ["UserId": userId, "Fields": Self.itemFields])
+            let data = try await send("Items/\(id)", query: ["UserId": userId, "Fields": Self.detailFields])
             return try JSONDecoder.jellyfin.decode(BaseItem.self, from: data)
         } catch JellyfinError.http(let code) where code == 404 || code == 405 {
-            let data = try await send("Users/\(userId)/Items/\(id)", query: ["Fields": Self.itemFields])
+            let data = try await send("Users/\(userId)/Items/\(id)", query: ["Fields": Self.detailFields])
             return try JSONDecoder.jellyfin.decode(BaseItem.self, from: data)
         }
     }

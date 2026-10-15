@@ -80,7 +80,17 @@ struct Tile: Decodable, Identifiable, Hashable {
         }
     }
 
-    /// Sources non reliées au serveur (Trakt, TMDB, MDBList) : pas encore prises en charge.
+    /// Listes Trakt de la tuile (listes publiques et watchlist).
+    var traktSources: [TileSource] {
+        sources.filter { source in
+            switch source {
+            case .traktList, .traktBuiltIn: return true
+            default: return false
+            }
+        }
+    }
+
+    /// Sources non prises en charge (TMDB, MDBList).
     var externalSources: [String] {
         sources.compactMap { source in
             if case .external(let label) = source { return label }
@@ -92,8 +102,10 @@ struct Tile: Decodable, Identifiable, Hashable {
     func hash(into hasher: inout Hasher) { hasher.combine(id) }
 }
 
-enum TileSource: Decodable {
+enum TileSource: Decodable, Hashable {
     case mediaServer(collectionId: String, name: String?)
+    case traktList(username: String, listId: String)
+    case traktBuiltIn(String)
     case external(String)
 
     init(from decoder: Decoder) throws {
@@ -111,8 +123,20 @@ enum TileSource: Decodable {
                 return
             }
             self = .mediaServer(collectionId: id, name: try? inner.decode(String.self, forKey: AnyCodingKey("collectionName")))
-        case "traktList", "traktBuiltIn":
-            self = .external("Trakt")
+        case "traktBuiltIn":
+            self = .traktBuiltIn((try? c.nestedContainer(keyedBy: AnyCodingKey.self, forKey: key)
+                .decode(String.self, forKey: AnyCodingKey("_0"))) ?? "watchlist")
+        case "traktList":
+            let inner = try? payload?.nestedContainer(keyedBy: AnyCodingKey.self, forKey: AnyCodingKey("_0"))
+            let listKey = AnyCodingKey("listId")
+            let listId = (try? inner?.decode(String.self, forKey: listKey))
+                ?? (try? inner?.decode(Int.self, forKey: listKey)).map { String($0) }
+                ?? (try? inner?.decode(String.self, forKey: AnyCodingKey("listSlug")))
+            guard let listId, let username = try? inner?.decode(String.self, forKey: AnyCodingKey("username")) else {
+                self = .external("Trakt")
+                return
+            }
+            self = .traktList(username: username, listId: listId)
         case "mdbListList":
             self = .external("MDBList")
         case "tmdbDiscover":

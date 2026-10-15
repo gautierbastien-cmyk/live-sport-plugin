@@ -54,6 +54,9 @@ struct ItemDetailView: View {
                     Text(seriesName).font(.headline).foregroundStyle(.secondary)
                 }
                 Text(current.title).font(.largeTitle.bold())
+                if let tagline = current.taglines?.first, !tagline.isEmpty {
+                    Text(tagline).font(.subheadline.italic()).foregroundStyle(.secondary)
+                }
                 if current.isEpisode, let season = current.parentIndexNumber, let number = current.indexNumber {
                     Text("Saison \(season) · Épisode \(number)").font(.subheadline).foregroundStyle(.secondary)
                 }
@@ -63,8 +66,44 @@ struct ItemDetailView: View {
                 if let overview = current.overview, !overview.isEmpty {
                     Text(overview).font(.callout)
                 }
+                if let studios = current.studios?.compactMap(\.name), !studios.isEmpty {
+                    Text("Studio : " + studios.prefix(3).joined(separator: ", "))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
             .padding(.horizontal)
+
+            castRow
+        }
+    }
+
+    /// Réalisateurs et acteurs principaux.
+    @ViewBuilder
+    private var castRow: some View {
+        let people = (current.people ?? []).filter { ["Actor", "Director", "GuestStar"].contains($0.type ?? "") }
+        if !people.isEmpty {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Distribution").font(.headline).padding(.horizontal)
+                ScrollView(.horizontal, showsIndicators: false) {
+                    LazyHStack(alignment: .top, spacing: 12) {
+                        ForEach(people.prefix(25)) { person in
+                            VStack(spacing: 4) {
+                                RemoteImage(url: session.client.imageURL(itemId: person.id, type: "Primary",
+                                                                         tag: person.primaryImageTag, maxWidth: 200),
+                                            placeholder: "person.fill")
+                                    .frame(width: 72, height: 72)
+                                    .clipShape(Circle())
+                                Text(person.name ?? "").font(.caption).lineLimit(2).multilineTextAlignment(.center)
+                                Text(person.type == "Director" ? "Réalisation" : (person.role ?? ""))
+                                    .font(.caption2).foregroundStyle(.secondary).lineLimit(1)
+                            }
+                            .frame(width: 84)
+                        }
+                    }
+                    .padding(.horizontal)
+                }
+            }
         }
     }
 

@@ -85,12 +85,41 @@ struct ItemGrid: View {
     }
 }
 
+/// Grille d'éléments venant de Trakt.
+struct ExternalGrid: View {
+    let items: [ExternalItem]
+
+    private let columns = [GridItem(.adaptive(minimum: 110, maximum: 160), spacing: 12, alignment: .top)]
+
+    var body: some View {
+        LazyVGrid(columns: columns, alignment: .leading, spacing: 16) {
+            ForEach(items) { item in
+                NavigationLink(value: item) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Color.clear
+                            .aspectRatio(2 / 3, contentMode: .fit)
+                            .overlay { RemoteImage(url: item.posterURL) }
+                            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                        Text(item.title).font(.caption).lineLimit(2)
+                        if let year = item.media.year {
+                            Text(String(year)).font(.caption2).foregroundStyle(.secondary)
+                        }
+                    }
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal)
+    }
+}
+
 /// Destinations de navigation communes (fiche d'un élément, contenu d'une tuile).
 struct AppNavigation: ViewModifier {
     func body(content: Content) -> some View {
         content
             .navigationDestination(for: BaseItem.self) { ItemDetailView(item: $0) }
             .navigationDestination(for: Tile.self) { TileView(tile: $0) }
+            .navigationDestination(for: ExternalItem.self) { ExternalItemDetailView(item: $0) }
     }
 }
 

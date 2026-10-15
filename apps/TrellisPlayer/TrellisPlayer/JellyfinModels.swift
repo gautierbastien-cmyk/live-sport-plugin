@@ -31,6 +31,30 @@ struct BaseItem: Decodable, Identifiable, Hashable {
 
     let userData: UserData?
 
+    let taglines: [String]?
+    let studios: [NamedItem]?
+    let people: [Person]?
+    let providerIds: [String: String]?
+    let premiereDate: String?
+
+    struct NamedItem: Decodable, Hashable {
+        let name: String?
+        let id: String?
+    }
+
+    struct Person: Decodable, Hashable, Identifiable {
+        let id: String
+        let name: String?
+        let role: String?
+        let type: String?
+        let primaryImageTag: String?
+    }
+
+    /// Identifiant externe (Imdb, Tmdb, Tvdb), quelle que soit la casse de la clé.
+    func providerId(_ provider: String) -> String? {
+        providerIds?.first { $0.key.caseInsensitiveCompare(provider) == .orderedSame }?.value
+    }
+
     struct UserData: Decodable, Hashable {
         let playedPercentage: Double?
         let played: Bool?

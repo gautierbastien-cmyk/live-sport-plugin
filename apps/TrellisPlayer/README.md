@@ -31,9 +31,22 @@ Client SwiftUI pour le serveur **Treillis** (API Jellyfin), avec la page d'accue
 4. Sur l'iPhone : Réglages → Général → VPN et gestion de l'appareil → fais confiance à ton
    compte développeur.
 
+## Trakt
+
+Les tuiles Trakt (listes publiques, Watchlist) sont chargées via l'API Trakt, avec affiches,
+résumés, notes et genres. Dans **Réglages → Trakt** :
+
+1. Crée une application sur <https://trakt.tv/oauth/applications/new>
+   (Redirect URI : `urn:ietf:wg:oauth:2.0:oob`).
+2. Colle son **Client ID** et son **Client Secret**.
+3. **Connecter mon compte Trakt** : saisis le code affiché sur trakt.tv/activate (nécessaire
+   pour la Watchlist).
+
+Ouvrir un film/une série Trakt affiche ses métadonnées puis le retrouve sur Treillis
+(identifiants IMDb/TMDB, sinon titre + année) pour le lire.
+
 ## Limites
 
-- Les tuiles construites sur **Trakt**, **TMDB Discover** ou **MDBList** (Watchlist, une partie
-  des Genres, Acteurs, Réalisateurs et Collections) ne sont pas encore prises en charge :
-  elles s'affichent mais restent vides.
+- Les tuiles construites sur **TMDB Discover** ou **MDBList** (une partie des Genres, les
+  Acteurs) ne sont pas encore prises en charge : elles s'affichent mais restent vides.
 - Avec un compte Apple gratuit, l'app doit être réinstallée depuis Xcode tous les 7 jours.
