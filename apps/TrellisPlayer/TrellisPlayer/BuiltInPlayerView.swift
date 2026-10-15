@@ -1,8 +1,7 @@
 import AVKit
 import SwiftUI
 
-/// Lecteur AVPlayer plein écran. Contrairement à Infuse, il peut envoyer les
-/// en-têtes HTTP (Referer, User-Agent…) exigés par certains flux.
+/// Lecteur AVPlayer plein écran, sur la version HLS fournie par le serveur.
 struct BuiltInPlayerView: View {
     let stream: PlayableStream
 
@@ -28,12 +27,7 @@ struct BuiltInPlayerView: View {
             .accessibilityLabel("Fermer")
         }
         .onAppear {
-            var options: [String: Any] = [:]
-            if !stream.headers.isEmpty {
-                options["AVURLAssetHTTPHeaderFieldsKey"] = stream.headers
-            }
-            let asset = AVURLAsset(url: stream.url, options: options)
-            let player = AVPlayer(playerItem: AVPlayerItem(asset: asset))
+            let player = AVPlayer(url: stream.builtInURL)
             self.player = player
             player.play()
         }

@@ -1,46 +1,91 @@
 import SwiftUI
 
 struct RootView: View {
-    @AppStorage("serverURL") private var serverURL = AppDefaults.serverURL
-
-    @StateObject private var store = AddonStore()
+    @StateObject private var session = Session()
+    @StateObject private var layout = HomeLayoutStore()
     @StateObject private var playback = PlaybackController()
-    @StateObject private var browser = BrowserModel()
-    @State private var tab = AppTab.home
-
-    enum AppTab { case home, search, trellis, settings }
 
     var body: some View {
-        TabView(selection: $tab) {
-            HomeView(openTrellis: { tab = .trellis })
-                .tabItem { Label("Accueil", systemImage: "house") }
-                .tag(AppTab.home)
-            SearchView()
-                .tabItem { Label("Recherche", systemImage: "magnifyingglass") }
-                .tag(AppTab.search)
-            TrellisTabView(openHome: { tab = .home })
-                .tabItem { Label("Trellis", systemImage: "globe") }
-                .tag(AppTab.trellis)
-            SettingsView()
-                .tabItem { Label("Réglages", systemImage: "gearshape") }
-                .tag(AppTab.settings)
+        Group {
+            if session.isSignedIn {
+                TabView {
+                    HomeView()
+                        .tabItem { Label("Accueil", systemImage: "house") }
+                    SearchView()
+                        .tabItem { Label("Recherche", systemImage: "magnifyingglass") }
+                    SettingsView()
+                        .tabItem { Label("Réglages", systemImage: "gearshape") }
+                }
+                .modifier(PlaybackPresenter(playback: playback))
+            } else {
+                LoginView()
+            }
         }
-        .environmentObject(store)
+        .environmentObject(session)
+        .environmentObject(layout)
         .environmentObject(playback)
-        .environmentObject(browser)
-        .modifier(PlaybackPresenter(playback: playback))
-        .onAppear {
-            // Première utilisation : on commence par la connexion à Trellis.
-            if store.addons.isEmpty { tab = .trellis }
-            browser.loadIfNeeded(serverURL)
+    }
+}
+
+struct LoginView: View {
+    @EnvironmentObject private var session: Session
+
+    @State private var server = ""
+    @State private var username = ""
+    @State private var password = ""
+    @State private var working = false
+    @State private var error: String?
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    TextField("Serveur", text: $server)
+                        .keyboardType(.URL)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                    TextField("Nom d'utilisateur", text: $username)
+                        .textContentType(.username)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                    SecureField("Mot de passe", text: $password)
+                        .textContentType(.password)
+                        .onSubmit(signIn)
+                } footer: {
+                    if let error {
+                        Text(error).foregroundStyle(.red)
+                    } else {
+                        Text("Les mêmes identifiants que dans Strand.")
+                    }
+                }
+
+                Section {
+                    Button(action: signIn) {
+                        HStack {
+                            Spacer()
+                            if working { ProgressView() } else { Text("Se connecter").bold() }
+                            Spacer()
+                        }
+                    }
+                    .disabled(working || username.isEmpty || server.normalizedServerURL == nil)
+                }
+            }
+            .navigationTitle("Treillis")
+            .onAppear { if server.isEmpty { server = session.lastServer } }
         }
-        .onChange(of: serverURL) { _, newValue in browser.load(newValue) }
-        .onReceive(browser.discoveredManifests) { link in
-            Task { await store.addDiscovered(link) }
-        }
-        .task {
-            await browser.syncCookies()
-            await store.refresh()
+    }
+
+    private func signIn() {
+        guard !working else { return }
+        working = true
+        error = nil
+        Task {
+            do {
+                try await session.signIn(server: server, username: username, password: password)
+            } catch {
+                self.error = error.localizedDescription
+            }
+            working = false
         }
     }
 }

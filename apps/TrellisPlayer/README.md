@@ -1,22 +1,27 @@
 # Trellis Player (iPhone / iPad / Mac)
 
-App SwiftUI pour regarder le contenu des **addons hébergés sur Trellis** (format Stremio),
-avec **Infuse** comme lecteur externe.
+Client SwiftUI pour le serveur **Treillis** (API Jellyfin), avec la page d'accueil de
+**Strand** et **Infuse** comme lecteur externe.
 
 ## Fonctionnement
 
-- Au premier lancement, l'app ouvre l'onglet **Trellis** : connecte-toi. L'app repère alors
-  toute seule les addons hébergés (liens `manifest.json` vus dans l'interface ou ses réponses,
-  manifest du serveur) et réutilise ta session (cookies / jeton) pour les interroger.
-- **Accueil** : une rangée par catalogue de chaque addon. Touche une affiche pour voir
-  la fiche, les épisodes (séries) et les flux disponibles.
-- **Recherche** : cherche dans tous les catalogues qui acceptent la recherche.
-- **Réglages** : liste des addons (ajout manuel possible, suppression, ordre), lecteur par
-  défaut, adresse du serveur, déconnexion et **Diagnostic Trellis** (requêtes vues).
+- **Connexion** : adresse du serveur (`https://bastien-trellis.duckdns.org` par défaut),
+  nom d'utilisateur et mot de passe — les mêmes que dans Strand. Le jeton est gardé dans le
+  trousseau iOS.
+- **Accueil** : reproduit l'export Strand `TrellisPlayer/StrandHome.json` (sections, tuiles,
+  images de couverture) :
+  - *Reprendre la lecture* (`continueWatching`) ;
+  - rangées de tuiles (`collections_row`) : une tuile ouvre la grille de toutes ses
+    collections Treillis (`mediaServer`) ;
+  - *Catégories favorites* / *Radio* : chaînes TV en direct favorites et radios.
+- **Fiche** : film/épisode (bouton Lecture + choix de la source quand il y en a plusieurs),
+  série (saisons et épisodes), collection (grille).
+- **Recherche** dans tout le serveur.
+- **Réglages** : compte, lecteur par défaut, import d'un nouvel export Strand (.json).
 
-Quand tu touches un flux, l'app propose **Infuse**, **Lecteur intégré** ou **Copier le lien**
-(ou utilise directement le lecteur par défaut choisi dans les Réglages).
-Infuse est ouvert via `infuse://x-callback-url/play?url=<lien encodé>`.
+À la lecture, l'app demande les sources au serveur (`/Items/{id}/PlaybackInfo`) puis ouvre :
+- **Infuse** avec le fichier original : `infuse://x-callback-url/play?url=<…/Videos/{id}/stream?static=true&api_key=…>` ;
+- ou le **lecteur intégré** avec la version HLS (`master.m3u8`).
 
 ## Installer sur ton iPhone
 
@@ -28,8 +33,7 @@ Infuse est ouvert via `infuse://x-callback-url/play?url=<lien encodé>`.
 
 ## Limites
 
-- **Infuse ne reçoit que l'URL du flux**, sans en-têtes HTTP. Les flux qui exigent un
-  Referer/User-Agent (`behaviorHints.proxyHeaders`, signalés en orange) risquent d'échouer
-  dans Infuse : utilise le *Lecteur intégré*, qui envoie ces en-têtes.
-- Les flux torrent (`infoHash`) ne sont pas pris en charge.
+- Les tuiles construites sur **Trakt**, **TMDB Discover** ou **MDBList** (Watchlist, une partie
+  des Genres, Acteurs, Réalisateurs et Collections) ne sont pas encore prises en charge :
+  elles s'affichent mais restent vides.
 - Avec un compte Apple gratuit, l'app doit être réinstallée depuis Xcode tous les 7 jours.
