@@ -5,13 +5,14 @@ avec **Infuse** comme lecteur externe.
 
 ## Fonctionnement
 
-- **Accueil** : une rangée par catalogue de chaque addon ajouté. Touche une affiche pour voir
+- Au premier lancement, l'app ouvre l'onglet **Trellis** : connecte-toi. L'app repère alors
+  toute seule les addons hébergés (liens `manifest.json` vus dans l'interface ou ses réponses,
+  manifest du serveur) et réutilise ta session (cookies / jeton) pour les interroger.
+- **Accueil** : une rangée par catalogue de chaque addon. Touche une affiche pour voir
   la fiche, les épisodes (séries) et les flux disponibles.
 - **Recherche** : cherche dans tous les catalogues qui acceptent la recherche.
-- **Trellis** : affiche ton serveur (`https://bastien-trellis.duckdns.org` par défaut).
-  Toucher « Installer » sur un addon (lien `stremio://…` ou `…/manifest.json`) l'ajoute à l'app.
-- **Réglages** : liste des addons (ajout en collant le lien `manifest.json`, suppression,
-  réordonnancement), lecteur par défaut, adresse du serveur.
+- **Réglages** : liste des addons (ajout manuel possible, suppression, ordre), lecteur par
+  défaut, adresse du serveur, déconnexion et **Diagnostic Trellis** (requêtes vues).
 
 Quand tu touches un flux, l'app propose **Infuse**, **Lecteur intégré** ou **Copier le lien**
 (ou utilise directement le lecteur par défaut choisi dans les Réglages).

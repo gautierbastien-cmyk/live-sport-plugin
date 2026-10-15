@@ -50,12 +50,38 @@ final class AddonStore: ObservableObject {
         guard let url = AddonClient.manifestURL(from: input) else { throw AddonError.invalidURL(input) }
         guard !addons.contains(where: { $0.manifestURL == url }) else { throw AddonError.alreadyInstalled }
         let manifest = try await AddonClient.fetchManifest(url)
+        ignored.remove(url.absoluteString)
         addons.append(InstalledAddon(manifestURL: url, manifest: manifest))
         save()
         return manifest.name
     }
 
+    /// Ajoute sans bruit un addon repéré dans l'interface Trellis. Les liens
+    /// invalides ou inaccessibles sont ignorés (on réessaiera à la prochaine page).
+    func addDiscovered(_ link: String) async {
+        guard let url = AddonClient.manifestURL(from: link),
+              !addons.contains(where: { $0.manifestURL == url }),
+              !inFlight.contains(url),
+              !ignored.contains(url.absoluteString) else { return }
+        inFlight.insert(url)
+        defer { inFlight.remove(url) }
+        guard let manifest = try? await AddonClient.fetchManifest(url),
+              !addons.contains(where: { $0.manifestURL == url }) else { return }
+        addons.append(InstalledAddon(manifestURL: url, manifest: manifest))
+        save()
+    }
+
+    private var inFlight: Set<URL> = []
+
+    /// Addons supprimés à la main : la découverte automatique ne les rajoute pas.
+    private var ignored: Set<String> {
+        get { Set(UserDefaults.standard.stringArray(forKey: Self.ignoredKey) ?? []) }
+        set { UserDefaults.standard.set(Array(newValue), forKey: Self.ignoredKey) }
+    }
+    private static let ignoredKey = "ignoredAddonManifestURLs"
+
     func remove(atOffsets offsets: IndexSet) {
+        for index in offsets { ignored.insert(addons[index].manifestURL.absoluteString) }
         addons.remove(atOffsets: offsets)
         save()
     }

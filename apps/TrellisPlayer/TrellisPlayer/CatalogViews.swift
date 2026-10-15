@@ -2,7 +2,6 @@ import SwiftUI
 
 /// Accueil : une rangée par catalogue de chaque addon.
 struct HomeView: View {
-    let openSettings: () -> Void
     let openTrellis: () -> Void
 
     @EnvironmentObject private var store: AddonStore
@@ -12,13 +11,12 @@ struct HomeView: View {
             Group {
                 if store.addons.isEmpty {
                     ContentUnavailableView {
-                        Label("Aucun addon", systemImage: "puzzlepiece.extension")
+                        Label("Aucun contenu pour l'instant", systemImage: "puzzlepiece.extension")
                     } description: {
-                        Text("Ajoute tes addons Trellis : touche « Installer » dans l'onglet Trellis, ou colle le lien manifest.json dans les Réglages.")
+                        Text("Connecte-toi à Trellis : tes addons seront trouvés et chargés automatiquement.")
                     } actions: {
-                        Button("Ouvrir Trellis", action: openTrellis)
+                        Button("Se connecter à Trellis", action: openTrellis)
                             .buttonStyle(.borderedProminent)
-                        Button("Coller un lien", action: openSettings)
                     }
                 } else {
                     ScrollView {

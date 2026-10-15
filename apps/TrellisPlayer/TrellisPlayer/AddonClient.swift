@@ -89,6 +89,10 @@ enum AddonClient {
     private static func get<T: Decodable>(_ url: URL, as type: T.Type) async throws -> T {
         var request = URLRequest(url: url)
         request.setValue("application/json", forHTTPHeaderField: "Accept")
+        // Addons hébergés sur Trellis : on réutilise le jeton de l'interface.
+        if let authorization = TrellisAuth.header(for: url) {
+            request.setValue(authorization, forHTTPHeaderField: "Authorization")
+        }
         let (data, response) = try await session.data(for: request)
         if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
             throw AddonError.http(http.statusCode)

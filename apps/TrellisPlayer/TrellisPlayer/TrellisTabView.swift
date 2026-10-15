@@ -1,22 +1,21 @@
 import SwiftUI
 
-/// Onglet qui affiche le site Trellis. Toucher « Installer » sur un addon l'ajoute à l'app.
+/// Onglet de connexion à Trellis. Une fois connecté, l'app repère toute seule
+/// les addons hébergés et les ajoute à l'Accueil.
 struct TrellisTabView: View {
+    let openHome: () -> Void
+
     @AppStorage("serverURL") private var serverURL = AppDefaults.serverURL
 
     @EnvironmentObject private var store: AddonStore
-    @StateObject private var browser = BrowserModel()
-
-    @State private var pendingLink: String?
-    @State private var resultMessage: String?
-    @State private var adding = false
+    @EnvironmentObject private var browser: BrowserModel
 
     var body: some View {
         NavigationStack {
             WebView(webView: browser.webView)
                 .ignoresSafeArea(edges: .bottom)
                 .overlay(alignment: .top) {
-                    if browser.isLoading || adding {
+                    if browser.isLoading {
                         ProgressView().padding(8)
                     }
                 }
@@ -33,6 +32,20 @@ struct TrellisTabView: View {
                         .background(.background)
                     }
                 }
+                .overlay(alignment: .bottom) {
+                    if !store.addons.isEmpty {
+                        Button(action: openHome) {
+                            Label(store.addons.count == 1 ? "1 addon trouvé · Voir le contenu"
+                                                          : "\(store.addons.count) addons trouvés · Voir le contenu",
+                                  systemImage: "checkmark.circle.fill")
+                                .font(.headline)
+                                .padding(.horizontal, 8)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .controlSize(.large)
+                        .padding(.bottom, 24)
+                    }
+                }
                 .navigationTitle(browser.pageTitle?.isEmpty == false ? browser.pageTitle! : "Trellis")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
@@ -44,36 +57,6 @@ struct TrellisTabView: View {
                             .accessibilityLabel("Recharger")
                     }
                 }
-        }
-        .onAppear { browser.loadIfNeeded(serverURL) }
-        .onChange(of: serverURL) { _, newValue in browser.load(newValue) }
-        .onReceive(browser.addonLinks) { pendingLink = $0 }
-        .alert("Ajouter cet addon ?",
-               isPresented: Binding(get: { pendingLink != nil }, set: { if !$0 { pendingLink = nil } }),
-               presenting: pendingLink) { link in
-            Button("Ajouter") { add(link) }
-            Button("Annuler", role: .cancel) {}
-        } message: { link in
-            Text(AddonClient.manifestURL(from: link)?.absoluteString ?? link)
-        }
-        .alert("Addons",
-               isPresented: Binding(get: { resultMessage != nil }, set: { if !$0 { resultMessage = nil } })) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text(resultMessage ?? "")
-        }
-    }
-
-    private func add(_ link: String) {
-        adding = true
-        Task {
-            do {
-                let name = try await store.add(link)
-                resultMessage = "« \(name) » a été ajouté. Ses catalogues sont dans l'onglet Accueil."
-            } catch {
-                resultMessage = error.localizedDescription
-            }
-            adding = false
         }
     }
 }

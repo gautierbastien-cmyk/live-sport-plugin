@@ -5,6 +5,7 @@ struct SettingsView: View {
     @AppStorage("defaultPlayer") private var defaultPlayer: PlayerChoice = .ask
 
     @EnvironmentObject private var store: AddonStore
+    @EnvironmentObject private var browser: BrowserModel
 
     @State private var newAddon = ""
     @State private var adding = false
@@ -59,7 +60,7 @@ struct SettingsView: View {
                     if let addError {
                         Text(addError).foregroundStyle(.red)
                     } else {
-                        Text("Colle le lien manifest.json d'un addon hébergé sur Trellis, ou touche « Installer » dans l'onglet Trellis. Balaie vers la gauche pour supprimer.")
+                        Text("Les addons de Trellis sont ajoutés automatiquement une fois connecté. Tu peux aussi coller un lien manifest.json. Balaie vers la gauche pour supprimer.")
                     }
                 }
 
@@ -84,8 +85,33 @@ struct SettingsView: View {
                         .onSubmit {
                             if let url = draftServer.normalizedServerURL { serverURL = url.absoluteString }
                         }
+                    Button("Se déconnecter de Trellis", role: .destructive) {
+                        browser.signOut(serverURL: serverURL)
+                    }
                 } header: {
-                    Text("Adresse de Trellis (onglet Trellis)")
+                    Text("Trellis")
+                }
+
+                Section {
+                    LabeledContent("Jeton de connexion", value: TrellisAuth.hasToken(for: serverURL) ? "récupéré" : "aucun")
+                    if browser.requests.isEmpty {
+                        Text("Aucune requête vue. Ouvre l'onglet Trellis et connecte-toi.")
+                            .foregroundStyle(.secondary)
+                    }
+                    ForEach(browser.requests) { request in
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("\(request.method) · \(request.status)")
+                                .font(.caption.bold())
+                                .foregroundStyle((200..<300).contains(request.status) ? Color.secondary : Color.red)
+                            Text(request.url)
+                                .font(.caption2.monospaced())
+                                .lineLimit(2)
+                        }
+                    }
+                } header: {
+                    Text("Diagnostic Trellis")
+                } footer: {
+                    Text("Si aucun addon n'est trouvé après connexion, envoie une capture de cette liste.")
                 }
             }
             .navigationTitle("Réglages")
