@@ -8,14 +8,11 @@ enum ExternalPlayer {
         URL(string: "infuse://x-callback-url/play?url=" + strictlyEncoded(video.absoluteString))
     }
 
-    /// Ouvre la vidéo dans Infuse. `completion(false)` si Infuse n'est pas installé.
+    /// Ouvre la vidéo dans Infuse. Renvoie `false` si Infuse n'est pas installé.
     @MainActor
-    static func openInInfuse(_ video: URL, completion: @escaping (Bool) -> Void) {
-        guard let url = infuseURL(for: video) else {
-            completion(false)
-            return
-        }
-        UIApplication.shared.open(url, options: [:], completionHandler: completion)
+    static func openInInfuse(_ video: URL) async -> Bool {
+        guard let url = infuseURL(for: video) else { return false }
+        return await UIApplication.shared.open(url)
     }
 
     /// Encode tout sauf les caractères non réservés (RFC 3986), pour que les

@@ -123,8 +123,8 @@ struct ContentView: View {
         switch choice {
         case .infuse:
             browser.pauseWebMedia()
-            ExternalPlayer.openInInfuse(video.url) { opened in
-                if !opened { infuseMissing = true }
+            Task {
+                if await !ExternalPlayer.openInInfuse(video.url) { infuseMissing = true }
             }
         case .builtIn:
             browser.pauseWebMedia()
